@@ -1,0 +1,5 @@
+{
+  "name": "Modulo Sum Game",
+  "description": "A pure JavaScript state-based game engine implementing a simple sum modulo game.",
+  "requestFramePermissions": []
+}
