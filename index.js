@@ -2,13 +2,13 @@
 
 // import './style.css';
 import { initGame, handleGlobalKeydown, runMonteCarlo, runOptionMonteCarlo, getActivePlayer } from './game/engine.js';
-import { startScenario, AskPlayerCount } from './game/scenarios.js';
+import { startScenario, StartState } from './game/modulo-game.js';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
 // Initialize the game
-initGame(root, new AskPlayerCount(), startScenario);
+initGame(root, new StartState(), startScenario);
 
 // Set up global input handling
 document.addEventListener('keydown', (e) => {

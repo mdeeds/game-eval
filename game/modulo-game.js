@@ -17,7 +17,7 @@ export const startScenario = (log) => {
 /**
  * State: Ask how many players are playing.
  */
-export class AskPlayerCount {
+export class StartState {
   /**
    * @param {GameContext} context
    * @returns {string[]}
@@ -29,7 +29,7 @@ export class AskPlayerCount {
   /**
    * @param {string} input
    * @param {GameContext} context
-   * @returns {AskPlayerCount|PlayerTurn}
+   * @returns {StartState|PlayerTurn}
    */
   processOption(input, context) {
     if (!input) return this;
