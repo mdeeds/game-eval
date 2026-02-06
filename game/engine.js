@@ -1,21 +1,47 @@
+//@ts-check
+
+// @typedef {Object} GameState
+// @property {(context: GameContext) => (string|number)[]} getOptions
+// @property {(input: any, context: GameContext) => GameState|null} processOption
+
+// @typedef {Object} GameContext
+// @property {(key: string) => any} get
+// @property {(key: string, value: any) => void} set
+// @property {(id: number) => void} setActivePlayer
+// @property {(id: number) => void} setWinner
+// @property {() => number} getLastActivePlayer
+// @property {(text: string) => void} log
+
 // Global Engine State
+/** @type {HTMLElement|null} */
 let container = null;
+/** @type {GameState|null} */
 let currentState = null;
+/** @type {StateNodeImpl|null} */
 let stateHead = null;
 
 /**
  * Concrete implementation of the StateNode to handle recursive lookups.
  */
 class StateNodeImpl {
+  /**
+   * @param {StateNodeImpl|null} parent
+   * @param {GameState|null} handler
+   */
   constructor(parent, handler) {
     this.parent = parent;
     this.handler = handler;
+    /** @type {HTMLElement[]} */
     this.elements = [];
+    /** @type {Map<string, any>} */
     this.kvs = new Map();
     this.activePlayer = -1;
     this.winner = -1;
   }
 
+  /**
+   * @param {string} key
+   */
   get(key) {
     if (this.kvs.has(key)) {
       return this.kvs.get(key);
@@ -28,66 +54,40 @@ class StateNodeImpl {
 }
 
 /**
- * Sets a value in the current state node's KVS.
+ * Creates a context object for the given state node.
+ * @param {StateNodeImpl} node
+ * @param {(text: string) => void} log
+ * @returns {GameContext}
  */
-export function set(key, value) {
-  if (stateHead) {
-    stateHead.kvs.set(key, value);
-  }
-}
-
-/**
- * Gets a value from the current state history (recursive).
- */
-export function get(key) {
-  return stateHead ? stateHead.get(key) : undefined;
-}
-
-/**
- * Sets the active player on the current state node.
- */
-export function setActivePlayer(id) {
-  if (stateHead) {
-    stateHead.activePlayer = id;
-  }
+function makeContext(node, log) {
+  return {
+    get: (key) => node.get(key),
+    set: (key, value) => node.kvs.set(key, value),
+    setActivePlayer: (id) => { node.activePlayer = id; },
+    setWinner: (id) => { node.winner = id; },
+    getLastActivePlayer: () => node.parent ? node.parent.activePlayer : -1,
+    log: log
+  };
 }
 
 /**
  * Gets the currently active player.
+ * @returns {number}
  */
 export function getActivePlayer() {
   return stateHead ? stateHead.activePlayer : -1;
 }
 
 /**
- * Sets the winner on the current state node.
- */
-export function setWinner(id) {
-  if (stateHead) {
-    stateHead.winner = id;
-  }
-}
-
-/**
- * Gets the active player from the *parent* node (the state before the current action).
- * Useful for determining who just acted.
- */
-export function getLastActivePlayer() {
-  if (stateHead && stateHead.parent) {
-    return stateHead.parent.activePlayer;
-  }
-  return -1;
-}
-
-/**
  * Appends text to the terminal and tracks the element in the current state node.
+ * @param {string} text
  */
-export function print(text) {
+function print(text) {
   if (!container || !stateHead) return;
 
   const el = document.createElement('div');
   el.textContent = text;
-  
+
   container.appendChild(el);
   stateHead.elements.push(el);
   window.scrollTo(0, document.body.scrollHeight);
@@ -95,9 +95,12 @@ export function print(text) {
 
 /**
  * Initializes the game engine.
+ * @param {HTMLElement} rootElement
+ * @param {GameState} initialState
+ * @param {(log: (text: string) => void) => void} initialSetup
  */
 export function initGame(
-  rootElement, 
+  rootElement,
   initialState,
   initialSetup
 ) {
@@ -108,26 +111,30 @@ export function initGame(
   stateHead = new StateNodeImpl(null, initialState);
 
   container.innerHTML = '';
-  initialSetup();
+  initialSetup(print);
 }
 
 /**
  * Executes a state transition logic.
+ * @param {string|null} input
  */
 function transition(input) {
+  console.log('A');
   if (!currentState || !stateHead) return;
+  console.log('B');
 
   // 1. Create new history node
   const newNode = new StateNodeImpl(stateHead, currentState);
   stateHead = newNode;
 
   // 2. Run Logic
-  const nextState = currentState.processOption(input);
+  const nextState = currentState.processOption(input, makeContext(stateHead, print));
   currentState = nextState;
 
   // 3. Check for Auto-Transition in the NEW state
   if (currentState) {
-    const options = currentState.getOptions();
+    console.log('C');
+    const options = currentState.getOptions(makeContext(stateHead, print));
     if (options.length === 0) {
       transition(null);
     } else if (options.length === 1) {
@@ -155,7 +162,7 @@ function recursiveUndo() {
 
   // 4. Check if the *restored* state is automatic. 
   if (currentState) {
-    const options = currentState.getOptions();
+    const options = currentState.getOptions(makeContext(stateHead, print));
     // If it's an auto-state, user didn't stop there, so undo further.
     if (options.length <= 1) {
       recursiveUndo();
@@ -164,6 +171,7 @@ function recursiveUndo() {
 }
 
 export function handleGlobalKeydown(key) {
+  console.log('Keypress:', key);
   if (!container || !stateHead) return;
 
   // --- UNDO ---
@@ -178,25 +186,27 @@ export function handleGlobalKeydown(key) {
   if (!currentState) return;
 
   // --- INPUT ---
-  const options = currentState.getOptions();
-  
+  const options = currentState.getOptions(makeContext(stateHead, print));
+  console.log('Options:', options);
+
   if (options.length > 1) {
     if (options.includes(key)) {
       transition(key);
     }
-  } 
+  }
 }
 
 /**
  * Runs Monte Carlo simulations from the current state.
  * @param {number} simulations Number of iterations to run
- * @returns {object} Map of winner_id -> count
+ * @returns {Object<string, number>|null} Map of winner_id -> count
  */
 export function runMonteCarlo(simulations) {
   if (!currentState || !stateHead) return null;
 
   const savedHead = stateHead;
   const savedState = currentState;
+  /** @type {Object<string, number>} */
   const results = {};
 
   for (let i = 0; i < simulations; i++) {
@@ -205,7 +215,7 @@ export function runMonteCarlo(simulations) {
     currentState = savedState;
 
     while (currentState) {
-      const options = currentState.getOptions();
+      const options = currentState.getOptions(makeContext(stateHead, () => { }));
       let input = null;
 
       if (options.length === 0) {
@@ -223,7 +233,7 @@ export function runMonteCarlo(simulations) {
       stateHead = newNode;
 
       // 2. Run Logic with NO-OP logger to prevent UI updates
-      const nextState = currentState.processOption(input, () => {});
+      const nextState = currentState.processOption(input, makeContext(stateHead, () => { }));
       currentState = nextState;
     }
 
@@ -246,7 +256,7 @@ export function runMonteCarlo(simulations) {
  * Returns the win count for the *current active player* for each option.
  * 
  * @param {number} simulationsPerOption
- * @returns {object|null} Map of option -> win_count for current player
+ * @returns {Object<string, number>|null} Map of option -> win_count for current player
  */
 export function runOptionMonteCarlo(simulationsPerOption) {
   if (!currentState || !stateHead) return null;
@@ -258,7 +268,8 @@ export function runOptionMonteCarlo(simulationsPerOption) {
   // If no valid player is active (e.g. setup phase), we can't estimate "this" player's wins.
   if (activePlayer === -1) return null;
 
-  const options = currentState.getOptions();
+  const options = currentState.getOptions(makeContext(stateHead, () => { }));
+  /** @type {Object<string, number>} */
   const results = {};
 
   for (const opt of options) {
@@ -269,13 +280,13 @@ export function runOptionMonteCarlo(simulationsPerOption) {
     // 2. Perform the single transition for this option (manually)
     const newNode = new StateNodeImpl(stateHead, currentState);
     stateHead = newNode;
-    const nextState = currentState.processOption(opt, () => {});
+    const nextState = currentState.processOption(opt, makeContext(stateHead, () => { }));
     currentState = nextState;
 
     // 3. Run Monte Carlo from this new hypothetical state
     // runMonteCarlo saves and restores the state internally, so it won't mess up our loop iteration state (which is the hypothetical state)
     const simResults = runMonteCarlo(simulationsPerOption);
-    
+
     // 4. Record wins for the original active player
     results[opt] = simResults[activePlayer] || 0;
   }
