@@ -1,18 +1,21 @@
 //@ts-check
 
 // import './style.css';
-import { initGame, handleGlobalKeydown, runMonteCarlo, runOptionMonteCarlo, getActivePlayer } from './game/engine.js';
-import { startScenario, StartState } from './game/modulo-game.js';
+import { Engine, runMonteCarlo, runOptionMonteCarlo } from './game/engine.js';
+import { StartState } from './game/ttt-game.js';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
 // Initialize the game
-initGame(root, new StartState(), startScenario);
+const engine = new Engine();
+console.log('A');
+engine.initGame(root, new StartState());
+console.log('B');
 
 // Set up global input handling
 document.addEventListener('keydown', (e) => {
-  handleGlobalKeydown(e.key);
+  engine.handleGlobalKeydown(e.key);
 });
 
 // --- Monte Carlo UI ---
@@ -41,7 +44,7 @@ winnerBtn.onclick = () => {
   clearResults();
 
   setTimeout(() => {
-    const results = runMonteCarlo(1000);
+    const results = runMonteCarlo(engine, 1000);
     resultsDiv.innerHTML = '';
 
     if (!results) {
@@ -71,9 +74,9 @@ optionsBtn.onclick = () => {
   clearResults();
 
   setTimeout(() => {
-    const currentPlayer = getActivePlayer();
+    const currentPlayer = engine.getActivePlayer();
     const simCount = 200; // Simulations per option
-    const results = runOptionMonteCarlo(simCount);
+    const results = runOptionMonteCarlo(engine, simCount);
     resultsDiv.innerHTML = '';
 
     if (results === null) {
