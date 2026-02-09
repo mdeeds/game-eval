@@ -138,7 +138,11 @@ export class Engine {
 
   #updateInputDisplay() {
     if (this.inputElement) {
-      this.inputElement.textContent = this.inputBuffer;
+      if (this.currentState) {
+        this.inputElement.textContent = `> ${this.inputBuffer}_`;
+      } else {
+        this.inputElement.textContent = '';
+      }
     }
   }
 
@@ -164,6 +168,7 @@ export class Engine {
     // Initialize the Linked List with a root node. 
     this.stateHead = new StateNode(null, initialState);
     this.#autoTransition();
+    this.#updateInputDisplay();
   }
 
   /**
@@ -173,6 +178,7 @@ export class Engine {
   transition(input) {
     this.#transitionOnce(input);
     this.#autoTransition();
+    this.#updateInputDisplay();
   }
 
   /**
@@ -200,6 +206,7 @@ export class Engine {
         this.recursiveUndo();
       }
     }
+    this.#updateInputDisplay();
   }
 
   handleGlobalKeydown(key) {
