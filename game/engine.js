@@ -71,6 +71,10 @@ export class Engine {
     this.currentState = null;
     /** @type {StateNode|null} */
     this.stateHead = null;
+    /** @type {string} */
+    this.inputBuffer = '';
+    /** @type {HTMLElement|null} */
+    this.inputElement = null;
   }
 
   /**
@@ -91,7 +95,11 @@ export class Engine {
     const el = document.createElement('div');
     el.textContent = text;
 
-    this.container.appendChild(el);
+    if (this.inputElement && this.container.contains(this.inputElement)) {
+      this.container.insertBefore(el, this.inputElement);
+    } else {
+      this.container.appendChild(el);
+    }
     this.stateHead.elements.push(el);
     window.scrollTo(0, document.body.scrollHeight);
   }
@@ -128,6 +136,12 @@ export class Engine {
     }
   }
 
+  #updateInputDisplay() {
+    if (this.inputElement) {
+      this.inputElement.textContent = this.inputBuffer;
+    }
+  }
+
   /**
    * Initializes the game engine.
    * @param {HTMLElement} rootElement
@@ -141,6 +155,11 @@ export class Engine {
     this.container = rootElement;
     this.currentState = initialState;
     this.container.innerHTML = '';
+
+    this.inputBuffer = '';
+    this.inputElement = document.createElement('span');
+    this.container.appendChild(this.inputElement);
+    this.#updateInputDisplay();
 
     // Initialize the Linked List with a root node. 
     this.stateHead = new StateNode(null, initialState);
@@ -189,7 +208,10 @@ export class Engine {
 
     // --- UNDO ---
     if (key === 'Backspace') {
-      if (this.stateHead.parent) {
+      if (this.inputBuffer.length > 0) {
+        this.inputBuffer = this.inputBuffer.slice(0, -1);
+        this.#updateInputDisplay();
+      } else if (this.stateHead.parent) {
         this.recursiveUndo();
       }
       return;
@@ -198,14 +220,20 @@ export class Engine {
     // If game is over, ignore inputs
     if (!this.currentState) return;
 
-    // --- INPUT ---
-    const options = this.currentState.getOptions(new GameContext(this.stateHead, (text) => this.#print(text)));
-    console.log('Options:', options);
+    if (key.length !== 1) return;
 
-    if (options.length > 1) {
-      if (options.includes(key)) {
-        this.transition(key);
-      }
+    // --- INPUT ---
+    const options = this.currentState.getOptions(new GameContext(this.stateHead, () => { }));
+    const nextInput = this.inputBuffer + key;
+    const matches = options.filter(opt => opt.startsWith(nextInput));
+
+    if (matches.length === 1) {
+      this.inputBuffer = '';
+      this.#updateInputDisplay();
+      this.transition(matches[0]);
+    } else if (matches.length > 1) {
+      this.inputBuffer = nextInput;
+      this.#updateInputDisplay();
     }
   }
 }
