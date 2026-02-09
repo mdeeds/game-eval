@@ -1,35 +1,53 @@
 //@ts-check
 
 /** @typedef {import('./engine.js').GameContext} GameContext */
+/** @typedef {import('./engine.js').GameState} GameState */
 
 // --- Shared Helpers ---
 const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 /**
- * Initial Setup (Visual only)
- * @param {(text: string) => void} log
+ * State: Start Game
  */
-export const startScenario = (log) => {
-  log("Welcome to the Modulo Sum Game.");
-  log("How many players? (1-9)");
-};
-
-/**
- * State: Ask how many players are playing.
- */
+/** @implements {GameState} */
 export class StartState {
   /**
    * @param {GameContext} context
    * @returns {string[]}
    */
   getOptions(context) {
-    return ['2', '3', '4', '5'];
+    return [];
   }
 
   /**
    * @param {string} input
    * @param {GameContext} context
-   * @returns {StartState|PlayerTurn}
+   * @returns {GameState}
+   */
+  processOption(input, context) {
+    context.log("Welcome to the Modulo Sum Game.");
+    context.log("How many players? (1-9)");
+    return new GetPlayerCount();
+  }
+}
+
+/**
+ * State: Ask how many players are playing.
+ */
+/** @implements {GameState} */
+export class GetPlayerCount {
+  /**
+   * @param {GameContext} context
+   * @returns {string[]}
+   */
+  getOptions(context) {
+    return ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  }
+
+  /**
+   * @param {string} input
+   * @param {GameContext} context
+   * @returns {GameState}
    */
   processOption(input, context) {
     if (!input) return this;
@@ -55,6 +73,7 @@ export class StartState {
 /**
  * State: A generic player's turn.
  */
+/** @implements {GameState} */
 export class PlayerTurn {
   /**
    * @param {GameContext} context
@@ -67,7 +86,7 @@ export class PlayerTurn {
   /**
    * @param {string} input
    * @param {GameContext} context
-   * @returns {PlayerTurn|EndGame}
+   * @returns {GameState}
    */
   processOption(input, context) {
     if (!input) return this;
@@ -102,10 +121,11 @@ export class PlayerTurn {
 /**
  * State: Game Over processing.
  */
+/** @implements {GameState} */
 export class EndGame {
   /**
    * @param {GameContext} context
-   * @returns {(string|number)[]}
+   * @returns {(string)[]}
    */
   getOptions(context) {
     return []; // Automatic transition
@@ -114,7 +134,7 @@ export class EndGame {
   /**
    * @param {string} input
    * @param {GameContext} context
-   * @returns {null}
+   * @returns {GameState|null}
    */
   processOption(input, context) {
     const finalSum = context.get('current_sum');

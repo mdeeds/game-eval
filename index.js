@@ -2,7 +2,7 @@
 
 // import './style.css';
 import { Engine, runMonteCarlo, runOptionMonteCarlo } from './game/engine.js';
-import { StartState } from './game/ttt-game.js';
+import { StartState } from './game/modulo-game.js';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
