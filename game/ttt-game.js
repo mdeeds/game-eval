@@ -2,6 +2,7 @@
 
 /** @typedef {import('./engine.js').GameContext} GameContext */
 /** @typedef {import('./engine.js').GameState} GameState */
+/** @typedef {import('./engine.js').StateNode} StateNode */
 
 // --- Shared Helpers ---
 // Winning combinations indices
@@ -18,30 +19,32 @@ const WINS = [
 /** @implements {GameState} */
 export class StartState {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {string[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     return [];
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState}
    */
-  processOption(input, context) {
+  processOption(input, node, context) {
 
     // Initialize empty board (null = empty, 1 = X, 2 = O)
-    context.set('board', Array(9).fill(null));
+    node.set('board', Array(9).fill(null));
 
     // Player 1 starts
-    context.setActivePlayer(1);
+    node.activePlayer = 1;
     context.log("Welcome to Tic-Tac-Toe.");
     context.log("Player 1 is X. Player 2 is O.");
     context.log("----------------");
     context.log("Game Started.");
-    printBoard(context, Array(9).fill(null));
+    printBoard(context, node, Array(9).fill(null));
 
     return new PlayerTurn();
   }
@@ -54,20 +57,22 @@ export class StartState {
 /** @implements {GameState} */
 export class PlayerTurn {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    */
-  onEnter(context) {
-    const player = context.getActivePlayer();
+  onEnter(node, context) {
+    const player = node.activePlayer;
     context.log(`Player ${player} (${player === 1 ? 'X' : 'O'}), choose a position (1-9):`);
   }
 
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {string[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     /** @type {Array<number|null>} */
-    const board = context.get('board');
+    const board = node.get('board');
     const options = [];
     for (let i = 0; i < 9; i++) {
       if (board[i] === null) {
@@ -79,29 +84,30 @@ export class PlayerTurn {
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState}
    */
-  processOption(input, context) {
+  processOption(input, node, context) {
     if (!input) return this;
 
     const idx = parseInt(input) - 1;
     /** @type {Array<number|null>} */
-    const oldBoard = context.get('board');
+    const oldBoard = node.get('board');
 
     // Create a copy to ensure immutability in history
     const newBoard = [...oldBoard];
 
-    const currentPlayer = context.getLastActivePlayer();
+    const currentPlayer = node.getLastActivePlayer();
     newBoard[idx] = currentPlayer;
 
-    context.set('board', newBoard);
+    node.set('board', newBoard);
     context.log(`> Player ${currentPlayer} chose ${idx}`);
-    printBoard(context, newBoard);
+    printBoard(context, node, newBoard);
 
     // Check Win
     if (checkWin(newBoard, currentPlayer)) {
-      context.set('winner_id', currentPlayer);
+      node.set('winner_id', currentPlayer);
       return new EndGame();
     }
 
@@ -112,7 +118,7 @@ export class PlayerTurn {
 
     // Switch Player
     const nextPlayer = currentPlayer === 1 ? 2 : 1;
-    context.setActivePlayer(nextPlayer);
+    node.activePlayer = nextPlayer;
 
     return new PlayerTurn();
   }
@@ -125,24 +131,26 @@ export class PlayerTurn {
 /** @implements {GameState} */
 export class EndGame {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {(string)[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     return []; // Automatic transition
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState|null}
    */
-  processOption(input, context) {
-    const winnerId = context.get('winner_id');
+  processOption(input, node, context) {
+    const winnerId = node.get('winner_id');
 
     context.log("----------------");
     if (winnerId) {
-      context.setWinner(winnerId);
+      node.winner = winnerId;
       context.log(`Player ${winnerId} wins!`);
     } else {
       context.log("It's a draw!");
@@ -168,9 +176,10 @@ function checkWin(board, player) {
 /**
  * Prints the board to the log.
  * @param {GameContext} context
+ * @param {StateNode} node
  * @param {Array<number|null>} board
  */
-function printBoard(context, board) {
+function printBoard(context, node, board) {
   const s = board.map(c => c === 1 ? 'X' : (c === 2 ? 'O' : '.'));
   context.log(`${s[0]} ${s[1]} ${s[2]}`);
   context.log(`${s[3]} ${s[4]} ${s[5]}`);

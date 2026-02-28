@@ -3,9 +3,9 @@
 /**
  * @interface
  * @typedef {Object} GameState
- * @property {(context: GameContext) => (string)[]} getOptions
- * @property {(input: string, context: GameContext) => GameState|null} processOption
- * @property {(context: GameContext) => void} [onEnter]
+ * @property {(node: StateNode, context: GameContext) => (string)[]} getOptions
+ * @property {(input: string, node: StateNode, context: GameContext) => GameState|null} processOption
+ * @property {(node: StateNode, context: GameContext) => void} [onEnter]
  */
 
 /**
@@ -24,7 +24,7 @@ export class StateNode {
     this.elements = [];
     /** @type {Map<string, any>} */
     this.kvs = new Map();
-    this.activePlayer = -1;
+    this.activePlayer = parent ? parent.activePlayer : -1;
     this.winner = -1;
   }
 
@@ -41,6 +41,18 @@ export class StateNode {
     }
     return undefined;
   }
+
+  /**
+   * @param {string} key
+   * @param {any} value
+   */
+  set(key, value) {
+    this.kvs.set(key, value);
+  }
+
+  getLastActivePlayer() {
+    return this.parent ? this.parent.activePlayer : -1;
+  }
 }
 
 /**
@@ -48,20 +60,11 @@ export class StateNode {
  */
 export class GameContext {
   /**
-   * @param {StateNode} node
    * @param {(text: string) => void} log
    */
-  constructor(node, log) {
-    this.node = node;
+  constructor(log) {
     this.log = log;
   }
-
-  get(key) { return this.node.get(key); }
-  set(key, value) { this.node.kvs.set(key, value); }
-  getActivePlayer() { return this.node.activePlayer; }
-  setActivePlayer(id) { this.node.activePlayer = id; }
-  setWinner(id) { this.node.winner = id; }
-  getLastActivePlayer() { return this.node.parent ? this.node.parent.activePlayer : -1; }
 }
 
 export class Engine {
@@ -77,6 +80,8 @@ export class Engine {
     this.inputBuffer = '';
     /** @type {HTMLElement|null} */
     this.inputElement = null;
+    /** @type {GameContext} */
+    this.ctx = new GameContext((text) => this.#print(text));
   }
 
   /**
@@ -120,18 +125,17 @@ export class Engine {
 
     // 2. Run Logic
     const nextState = this.currentState.processOption(
-      input, new GameContext(this.stateHead, (text) => this.#print(text)));
+      input, this.stateHead, this.ctx);
     this.currentState = nextState;
 
     if (this.currentState && this.currentState.onEnter) {
-      this.currentState.onEnter(new GameContext(this.stateHead, (text) => this.#print(text)));
+      this.currentState.onEnter(this.stateHead, this.ctx);
     }
   }
 
   #autoTransition() {
     while (this.currentState) {
-      const context = new GameContext(this.stateHead, (text) => this.#print(text));
-      let nextOptions = this.currentState.getOptions(context);
+      let nextOptions = this.currentState.getOptions(this.stateHead, this.ctx);
       if (nextOptions.length === 0) {
         this.#transitionOnce(null);
       } else if (nextOptions.length === 1) {
@@ -161,7 +165,6 @@ export class Engine {
     rootElement,
     initialState
   ) {
-    console.log('A');
     this.container = rootElement;
     this.currentState = initialState;
     this.container.innerHTML = '';
@@ -174,7 +177,7 @@ export class Engine {
     // Initialize the Linked List with a root node. 
     this.stateHead = new StateNode(null, initialState);
     if (this.currentState.onEnter) {
-      this.currentState.onEnter(new GameContext(this.stateHead, (text) => this.#print(text)));
+      this.currentState.onEnter(this.stateHead, this.ctx);
     }
     this.#autoTransition();
     this.#updateInputDisplay();
@@ -209,7 +212,7 @@ export class Engine {
 
     // 4. Check if the *restored* state is automatic. 
     if (this.currentState) {
-      const options = this.currentState.getOptions(new GameContext(this.stateHead, (text) => this.#print(text)));
+      const options = this.currentState.getOptions(this.stateHead, this.ctx);
       // If it's an auto-state, user didn't stop there, so undo further.
       if (options.length <= 1) {
         this.recursiveUndo();
@@ -238,7 +241,7 @@ export class Engine {
 
     // --- ENTER ---
     if (key === 'Enter') {
-      const options = this.currentState.getOptions(new GameContext(this.stateHead, () => { }));
+      const options = this.currentState.getOptions(this.stateHead, this.ctx);
       if (options.includes(this.inputBuffer)) {
         const val = this.inputBuffer;
         this.inputBuffer = '';
@@ -251,7 +254,7 @@ export class Engine {
     if (key.length !== 1) return;
 
     // --- INPUT ---
-    const options = this.currentState.getOptions(new GameContext(this.stateHead, () => { }));
+    const options = this.currentState.getOptions(this.stateHead, this.ctx);
     const nextInput = this.inputBuffer + key;
     const matches = options.filter(opt => opt.startsWith(nextInput));
 

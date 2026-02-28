@@ -20,6 +20,7 @@ export function runMonteCarlo(engine, simulations) {
     const savedState = engine.currentState;
     /** @type {Object<string, number>} */
     const results = {};
+    const ctx = new GameContext(() => { });
 
     for (let i = 0; i < simulations; i++) {
         // Reset to start of simulation (the current game state)
@@ -28,7 +29,7 @@ export function runMonteCarlo(engine, simulations) {
 
         while (engine.currentState) {
             if (!engine.stateHead) throw new Error("State head is null during simulation");
-            const options = engine.currentState.getOptions(new GameContext(engine.stateHead, () => { }));
+            const options = engine.currentState.getOptions(engine.stateHead, ctx);
             let input = null;
 
             if (options.length === 0) {
@@ -46,11 +47,11 @@ export function runMonteCarlo(engine, simulations) {
             engine.stateHead = newNode;
 
             // 2. Run Logic with NO-OP logger to prevent UI updates
-            const nextState = engine.currentState.processOption(input, new GameContext(engine.stateHead, () => { }));
+            const nextState = engine.currentState.processOption(input, engine.stateHead, ctx);
             engine.currentState = nextState;
 
             if (engine.currentState && engine.currentState.onEnter) {
-                engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
+                engine.currentState.onEnter(engine.stateHead, ctx);
             }
         }
 
@@ -86,7 +87,8 @@ export function runOptionMonteCarlo(engine, simulationsPerOption) {
     // If no valid player is active (e.g. setup phase), we can't estimate "this" player's wins.
     if (activePlayer === -1) return null;
 
-    const options = engine.currentState.getOptions(new GameContext(engine.stateHead, () => { }));
+    const ctx = new GameContext(() => { });
+    const options = engine.currentState.getOptions(engine.stateHead, ctx);
     /** @type {Object<string, number>} */
     const results = {};
 
@@ -98,11 +100,11 @@ export function runOptionMonteCarlo(engine, simulationsPerOption) {
         // 2. Perform the single transition for this option (manually)
         const newNode = new StateNode(engine.stateHead, engine.currentState);
         engine.stateHead = newNode;
-        const nextState = engine.currentState.processOption(opt, new GameContext(engine.stateHead, () => { }));
+        const nextState = engine.currentState.processOption(opt, engine.stateHead, ctx);
         engine.currentState = nextState;
 
         if (engine.currentState && engine.currentState.onEnter) {
-            engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
+            engine.currentState.onEnter(engine.stateHead, ctx);
         }
 
         // 3. Run Monte Carlo from this new hypothetical state

@@ -2,6 +2,7 @@
 
 /** @typedef {import('./engine.js').GameContext} GameContext */
 /** @typedef {import('./engine.js').GameState} GameState */
+/** @typedef {import('./engine.js').StateNode} StateNode */
 
 /**
  * State: Start Game
@@ -9,19 +10,21 @@
 /** @implements {GameState} */
 export class StartState {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {string[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     return [];
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState}
    */
-  processOption(input, context) {
+  processOption(input, node, context) {
     context.log("Welcome to the Modulo Sum Game.");
     context.log("How many players? (1-9)");
     return new GetPlayerCount();
@@ -34,29 +37,31 @@ export class StartState {
 /** @implements {GameState} */
 export class GetPlayerCount {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {string[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     return ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState}
    */
-  processOption(input, context) {
+  processOption(input, node, context) {
     if (!input) return this;
 
     const count = parseInt(input);
 
     // Store initial game state in the history node
-    context.set('player_count', count);
+    node.set('player_count', count);
 
     // Explicitly set the active player for the next phase
-    context.setActivePlayer(1);
-    context.set('current_sum', 0);
+    node.activePlayer = 1;
+    node.set('current_sum', 0);
 
     context.log(`> ${input}`);
     context.log(`Great. ${count} players configured.`);
@@ -73,38 +78,40 @@ export class GetPlayerCount {
 /** @implements {GameState} */
 export class PlayerTurn {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {string[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     const NUMBERS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
     return NUMBERS;
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState}
    */
-  processOption(input, context) {
+  processOption(input, node, context) {
     if (!input) return this;
 
     const val = parseInt(input);
-    const currentSum = context.get('current_sum');
-    const totalPlayers = context.get('player_count');
+    const currentSum = node.get('current_sum');
+    const totalPlayers = node.get('player_count');
 
     // Retrieve who just played from the previous state node
-    const currentPlayer = context.getLastActivePlayer();
+    const currentPlayer = node.getLastActivePlayer();
 
     context.log(`> ${val}`);
 
     // Update state in the new history node
     const newSum = currentSum + val;
-    context.set('current_sum', newSum);
+    node.set('current_sum', newSum);
 
     if (currentPlayer < totalPlayers) {
       const nextPlayer = currentPlayer + 1;
-      context.setActivePlayer(nextPlayer);
+      node.activePlayer = nextPlayer;
 
       context.log(`Player ${nextPlayer}, enter a number (1-11):`);
       return new PlayerTurn();
@@ -122,25 +129,27 @@ export class PlayerTurn {
 /** @implements {GameState} */
 export class EndGame {
   /**
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {(string)[]}
    */
-  getOptions(context) {
+  getOptions(node, context) {
     return []; // Automatic transition
   }
 
   /**
    * @param {string} input
+   * @param {StateNode} node
    * @param {GameContext} context
    * @returns {GameState|null}
    */
-  processOption(input, context) {
-    const finalSum = context.get('current_sum');
-    const totalPlayers = context.get('player_count');
+  processOption(input, node, context) {
+    const finalSum = node.get('current_sum');
+    const totalPlayers = node.get('player_count');
     const winnerIndex = (finalSum % totalPlayers) + 1;
 
     // Set the winner in the final state node
-    context.setWinner(winnerIndex);
+    node.winner = winnerIndex;
 
     context.log("----------------");
     context.log(`Total Sum: ${finalSum}`);

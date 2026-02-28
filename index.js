@@ -10,9 +10,7 @@ if (!root) throw new Error('Root element not found');
 
 // Initialize the game
 const engine = new Engine();
-console.log('A');
 engine.initGame(root, new StartState());
-console.log('B');
 
 // Set up global input handling
 document.addEventListener('keydown', (e) => {
