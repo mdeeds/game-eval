@@ -49,10 +49,6 @@ export class StateNode {
   set(key, value) {
     this.kvs.set(key, value);
   }
-
-  getLastActivePlayer() {
-    return this.parent ? this.parent.activePlayer : -1;
-  }
 }
 
 /**

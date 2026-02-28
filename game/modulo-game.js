@@ -101,7 +101,7 @@ export class PlayerTurn {
     const totalPlayers = node.get('player_count');
 
     // Retrieve who just played from the previous state node
-    const currentPlayer = node.getLastActivePlayer();
+    const currentPlayer = node.activePlayer;
 
     context.log(`> ${val}`);
 

@@ -98,7 +98,7 @@ export class PlayerTurn {
     // Create a copy to ensure immutability in history
     const newBoard = [...oldBoard];
 
-    const currentPlayer = node.getLastActivePlayer();
+    const currentPlayer = node.activePlayer;
     newBoard[idx] = currentPlayer;
 
     node.set('board', newBoard);
