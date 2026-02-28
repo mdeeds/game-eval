@@ -92,3 +92,13 @@ import { StartState } from './game/my-new-game.js';
 // ...
 engine.initGame(root, new StartState());
 ```
+
+# Demo Game
+
+```
+git clone https://github.com/mdeeds/game-eval
+cd game-eval
+python -m http.server
+
+http://localhost:8000
+```

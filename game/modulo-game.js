@@ -3,9 +3,6 @@
 /** @typedef {import('./engine.js').GameContext} GameContext */
 /** @typedef {import('./engine.js').GameState} GameState */
 
-// --- Shared Helpers ---
-const NUMBERS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
-
 /**
  * State: Start Game
  */
@@ -80,6 +77,7 @@ export class PlayerTurn {
    * @returns {string[]}
    */
   getOptions(context) {
+    const NUMBERS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
     return NUMBERS;
   }
 
@@ -108,7 +106,7 @@ export class PlayerTurn {
       const nextPlayer = currentPlayer + 1;
       context.setActivePlayer(nextPlayer);
 
-      context.log(`Player ${nextPlayer}, enter a number (0-9):`);
+      context.log(`Player ${nextPlayer}, enter a number (1-11):`);
       return new PlayerTurn();
     } else {
       // Last player done. Transition to End Game logic.
