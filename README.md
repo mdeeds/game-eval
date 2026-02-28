@@ -89,8 +89,6 @@ To run your game, import your initial state in `index.js` and pass it to the eng
 
 ```javascript
 import { StartState } from './game/my-new-game.js';
-// ...
-engine.initGame(root, new StartState());
 ```
 
 # Demo Game
