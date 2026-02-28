@@ -2,7 +2,8 @@
 
 /** @typedef {import('./engine.js').GameState} GameState */
 
-import { Engine, GameContext, StateNode } from "./engine.js";
+import { Engine, GameContext } from "./engine.js";
+import { StateNode } from "./state-node.js";
 
 /**
  * Runs Monte Carlo simulations from the current state.

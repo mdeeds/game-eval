@@ -2,7 +2,8 @@
 
 /** @typedef {import('./engine.js').GameContext} GameContext */
 /** @typedef {import('./engine.js').GameState} GameState */
-/** @typedef {import('./engine.js').StateNode} StateNode */
+
+import { StateNode } from "./state-node.js";
 
 // --- Shared Helpers ---
 // Winning combinations indices
