@@ -227,6 +227,18 @@ export class Engine {
     // If game is over, ignore inputs
     if (!this.currentState) return;
 
+    // --- ENTER ---
+    if (key === 'Enter') {
+      const options = this.currentState.getOptions(new GameContext(this.stateHead, () => { }));
+      if (options.includes(this.inputBuffer)) {
+        const val = this.inputBuffer;
+        this.inputBuffer = '';
+        this.#updateInputDisplay();
+        this.transition(val);
+      }
+      return;
+    }
+
     if (key.length !== 1) return;
 
     // --- INPUT ---
