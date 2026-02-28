@@ -12,7 +12,7 @@
  * A node representing the current state of the game.  Current state that is not
  * captured in this node is captured in the parent.
  */
-class StateNode {
+export class StateNode {
   /**
    * @param {StateNode|null} parent
    * @param {GameState|null} handler
@@ -264,116 +264,4 @@ export class Engine {
       this.#updateInputDisplay();
     }
   }
-}
-
-/**
- * Runs Monte Carlo simulations from the current state.
- * @param {Engine} engine
- * @param {number} simulations Number of iterations to run
- * @returns {Object<string, number>|null} Map of winner_id -> count
- */
-export function runMonteCarlo(engine, simulations) {
-  if (!engine.currentState || !engine.stateHead) return null;
-
-  const savedHead = engine.stateHead;
-  const savedState = engine.currentState;
-  /** @type {Object<string, number>} */
-  const results = {};
-
-  for (let i = 0; i < simulations; i++) {
-    // Reset to start of simulation (the current game state)
-    engine.stateHead = savedHead;
-    engine.currentState = savedState;
-
-    while (engine.currentState) {
-      const options = engine.currentState.getOptions(new GameContext(engine.stateHead, () => { }));
-      let input = null;
-
-      if (options.length === 0) {
-        input = null; // Auto-transition for EndGame
-      } else if (options.length === 1) {
-        input = options[0];
-      } else {
-        // Random choice
-        const idx = Math.floor(Math.random() * options.length);
-        input = options[idx];
-      }
-
-      // 1. Create history node for the simulation step
-      const newNode = new StateNode(engine.stateHead, engine.currentState);
-      engine.stateHead = newNode;
-
-      // 2. Run Logic with NO-OP logger to prevent UI updates
-      const nextState = engine.currentState.processOption(input, new GameContext(engine.stateHead, () => { }));
-      engine.currentState = nextState;
-
-      if (engine.currentState && engine.currentState.onEnter) {
-        engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
-      }
-    }
-
-    // Game Over for this simulation run
-    if (engine.stateHead.winner !== -1) {
-      const w = engine.stateHead.winner;
-      results[w] = (results[w] || 0) + 1;
-    }
-  }
-
-  // Restore the actual game state
-  engine.stateHead = savedHead;
-  engine.currentState = savedState;
-
-  return results;
-}
-
-/**
- * Runs Monte Carlo simulations for each valid option of the current state.
- * Returns the win count for the *current active player* for each option.
- * 
- * @param {Engine} engine
- * @param {number} simulationsPerOption
- * @returns {Object<string, number>|null} Map of option -> win_count for current player
- */
-export function runOptionMonteCarlo(engine, simulationsPerOption) {
-  if (!engine.currentState || !engine.stateHead) return null;
-
-  const rootHead = engine.stateHead;
-  const rootState = engine.currentState;
-  const activePlayer = rootHead.activePlayer;
-
-  // If no valid player is active (e.g. setup phase), we can't estimate "this" player's wins.
-  if (activePlayer === -1) return null;
-
-  const options = engine.currentState.getOptions(new GameContext(engine.stateHead, () => { }));
-  /** @type {Object<string, number>} */
-  const results = {};
-
-  for (const opt of options) {
-    // 1. Reset to the root state
-    engine.stateHead = rootHead;
-    engine.currentState = rootState;
-
-    // 2. Perform the single transition for this option (manually)
-    const newNode = new StateNode(engine.stateHead, engine.currentState);
-    engine.stateHead = newNode;
-    const nextState = engine.currentState.processOption(opt, new GameContext(engine.stateHead, () => { }));
-    engine.currentState = nextState;
-
-    if (engine.currentState && engine.currentState.onEnter) {
-      engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
-    }
-
-    // 3. Run Monte Carlo from this new hypothetical state
-    // runMonteCarlo saves and restores the state internally, so it won't mess up our loop iteration state (which is the hypothetical state)
-    const simResults = runMonteCarlo(engine, simulationsPerOption);
-
-    // 4. Record wins for the original active player
-    results[opt] = simResults[activePlayer] || 0;
-  }
-
-  // Final Restore
-  engine.stateHead = rootHead;
-  engine.currentState = rootState;
-
-  return results;
 }

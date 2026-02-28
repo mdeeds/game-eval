@@ -1,7 +1,8 @@
 //@ts-check
 
 // import './style.css';
-import { Engine, runMonteCarlo, runOptionMonteCarlo } from './game/engine.js';
+import { Engine } from './game/engine.js';
+import { runMonteCarlo, runOptionMonteCarlo } from './game/monte-carlo.js';
 import { StartState } from './game/ttt-game.js';
 
 const root = document.getElementById('root');
