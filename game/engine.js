@@ -5,6 +5,7 @@
  * @typedef {Object} GameState
  * @property {(context: GameContext) => (string)[]} getOptions
  * @property {(input: string, context: GameContext) => GameState|null} processOption
+ * @property {(context: GameContext) => void} [onEnter]
  */
 
 /**
@@ -57,6 +58,7 @@ export class GameContext {
 
   get(key) { return this.node.get(key); }
   set(key, value) { this.node.kvs.set(key, value); }
+  getActivePlayer() { return this.node.activePlayer; }
   setActivePlayer(id) { this.node.activePlayer = id; }
   setWinner(id) { this.node.winner = id; }
   getLastActivePlayer() { return this.node.parent ? this.node.parent.activePlayer : -1; }
@@ -120,6 +122,10 @@ export class Engine {
     const nextState = this.currentState.processOption(
       input, new GameContext(this.stateHead, (text) => this.#print(text)));
     this.currentState = nextState;
+
+    if (this.currentState && this.currentState.onEnter) {
+      this.currentState.onEnter(new GameContext(this.stateHead, (text) => this.#print(text)));
+    }
   }
 
   #autoTransition() {
@@ -167,6 +173,9 @@ export class Engine {
 
     // Initialize the Linked List with a root node. 
     this.stateHead = new StateNode(null, initialState);
+    if (this.currentState.onEnter) {
+      this.currentState.onEnter(new GameContext(this.stateHead, (text) => this.#print(text)));
+    }
     this.#autoTransition();
     this.#updateInputDisplay();
   }
@@ -297,6 +306,10 @@ export function runMonteCarlo(engine, simulations) {
       // 2. Run Logic with NO-OP logger to prevent UI updates
       const nextState = engine.currentState.processOption(input, new GameContext(engine.stateHead, () => { }));
       engine.currentState = nextState;
+
+      if (engine.currentState && engine.currentState.onEnter) {
+        engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
+      }
     }
 
     // Game Over for this simulation run
@@ -345,6 +358,10 @@ export function runOptionMonteCarlo(engine, simulationsPerOption) {
     engine.stateHead = newNode;
     const nextState = engine.currentState.processOption(opt, new GameContext(engine.stateHead, () => { }));
     engine.currentState = nextState;
+
+    if (engine.currentState && engine.currentState.onEnter) {
+      engine.currentState.onEnter(new GameContext(engine.stateHead, () => { }));
+    }
 
     // 3. Run Monte Carlo from this new hypothetical state
     // runMonteCarlo saves and restores the state internally, so it won't mess up our loop iteration state (which is the hypothetical state)

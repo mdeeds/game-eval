@@ -42,7 +42,6 @@ export class StartState {
     context.log("----------------");
     context.log("Game Started.");
     printBoard(context, Array(9).fill(null));
-    context.log("Player 1 (X), choose a position (0-8):");
 
     return new PlayerTurn();
   }
@@ -54,6 +53,14 @@ export class StartState {
  */
 /** @implements {GameState} */
 export class PlayerTurn {
+  /**
+   * @param {GameContext} context
+   */
+  onEnter(context) {
+    const player = context.getActivePlayer();
+    context.log(`Player ${player} (${player === 1 ? 'X' : 'O'}), choose a position (1-9):`);
+  }
+
   /**
    * @param {GameContext} context
    * @returns {string[]}
@@ -106,7 +113,6 @@ export class PlayerTurn {
     // Switch Player
     const nextPlayer = currentPlayer === 1 ? 2 : 1;
     context.setActivePlayer(nextPlayer);
-    context.log(`Player ${nextPlayer} (${nextPlayer === 1 ? 'X' : 'O'}), choose a position (0-8):`);
 
     return new PlayerTurn();
   }
