@@ -36,8 +36,8 @@ export class StartState {
    */
   processOption(input, node, context) {
 
-    // Initialize empty board (null = empty, 1 = X, 2 = O)
-    node.set('board', Array(9).fill(null));
+    // Initialize empty board ('.' = empty, '1' = X, '2' = O)
+    node.set('board', ".........");
 
     // Player 1 starts
     node.activePlayer = 1;
@@ -45,7 +45,7 @@ export class StartState {
     context.log("Player 1 is X. Player 2 is O.");
     context.log("----------------");
     context.log("Game Started.");
-    printBoard(context, node, Array(9).fill(null));
+    printBoard(context, node, node.getAsString('board'));
 
     return new PlayerTurn();
   }
@@ -72,11 +72,11 @@ export class PlayerTurn {
    * @returns {string[]}
    */
   getOptions(node, context) {
-    /** @type {Array<number|null>} */
+    /** @type {string} */
     const board = node.get('board');
     const options = [];
     for (let i = 0; i < 9; i++) {
-      if (board[i] === null) {
+      if (board[i] === '.') {
         options.push(String(i + 1));
       }
     }
@@ -93,14 +93,11 @@ export class PlayerTurn {
     if (!input) return this;
 
     const idx = parseInt(input) - 1;
-    /** @type {Array<number|null>} */
+    /** @type {string} */
     const oldBoard = node.get('board');
 
-    // Create a copy to ensure immutability in history
-    const newBoard = [...oldBoard];
-
     const currentPlayer = node.activePlayer;
-    newBoard[idx] = currentPlayer;
+    const newBoard = oldBoard.substring(0, idx) + currentPlayer + oldBoard.substring(idx + 1);
 
     node.set('board', newBoard);
     context.log(`> Player ${currentPlayer} chose ${idx}`);
@@ -113,7 +110,7 @@ export class PlayerTurn {
     }
 
     // Check Draw
-    if (newBoard.every(cell => cell !== null)) {
+    if (!newBoard.includes('.')) {
       return new EndGame();
     }
 
@@ -147,7 +144,7 @@ export class EndGame {
    * @returns {GameState|null}
    */
   processOption(input, node, context) {
-    const winnerId = node.get('winner_id');
+    const winnerId = node.getAsNumber('winner_id');
 
     context.log("----------------");
     if (winnerId) {
@@ -164,13 +161,14 @@ export class EndGame {
 
 /**
  * Checks if the player has won.
- * @param {Array<number|null>} board
+ * @param {string} board
  * @param {number} player
  * @returns {boolean}
  */
 function checkWin(board, player) {
+  const pChar = String(player);
   return WINS.some(combo =>
-    combo.every(idx => board[idx] === player)
+    combo.every(idx => board[idx] === pChar)
   );
 }
 
@@ -178,10 +176,13 @@ function checkWin(board, player) {
  * Prints the board to the log.
  * @param {GameContext} context
  * @param {StateNode} node
- * @param {Array<number|null>} board
+ * @param {string|undefined} board
  */
 function printBoard(context, node, board) {
-  const s = board.map(c => c === 1 ? 'X' : (c === 2 ? 'O' : '.'));
+  if (!board) {
+    return context.log("Error: Board state is undefined!");
+  }
+  const s = board.split('').map(c => c === '1' ? 'X' : (c === '2' ? 'O' : '.'));
   context.log(`${s[0]} ${s[1]} ${s[2]}`);
   context.log(`${s[3]} ${s[4]} ${s[5]}`);
   context.log(`${s[6]} ${s[7]} ${s[8]}`);
